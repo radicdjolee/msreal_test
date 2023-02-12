@@ -110,7 +110,7 @@ void getIMDCT(void){
             if( half_n == 18 ){
                 xi_1 = s * cos_rom[k + ( i * 6 )];
                 xi = xi + xi_1;
-                brojac_xi ++;
+                //brojac_xi ++;
                 //printk(KERN_WARNING"counter: %d\n", brojac_xi);
                 // printk(KERN_WARNING"xi: %d\n", xi);
 
@@ -121,7 +121,7 @@ void getIMDCT(void){
             }else{
                 //printk(KERN_ALERT"GRESKA: half_n nije ni 6 ni 18");
             }
-            
+
         }
 
         // Windowing samples 
@@ -171,7 +171,7 @@ ssize_t IMDCT_read(struct file *f, char __user *buffer, size_t length, loff_t *o
     if(minor == 1){ //citamo iz bram_b
 
         value = bram_b[q];
-        len = scnprintf(buff,50, "%d,", value);
+        len = scnprintf(buff,BRAM_SIZE, "%d,", value);
         *offset += len;
         printk(KERN_NOTICE"buff = %s",buff);
         ret = copy_to_user(buffer, buff, len);
@@ -180,7 +180,7 @@ ssize_t IMDCT_read(struct file *f, char __user *buffer, size_t length, loff_t *o
 		}
         printk(KERN_NOTICE"k = %d",q);
         q++;
-        if( q > 10 ){
+        if( q > BRAM_SIZE ){
             endRead =1;
             q = 0;
         }
@@ -196,7 +196,6 @@ ssize_t IMDCT_read(struct file *f, char __user *buffer, size_t length, loff_t *o
         printk(KERN_WARNING"gr=%u\n", gr);
         printk(KERN_WARNING"ch=%u\n", ch);
         printk(KERN_WARNING"ready=%u\n", ready);
-    
     }
 
     return len;
@@ -222,12 +221,10 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
     int m = 0;
     int len;
 
-
-
     printk("IMDCT write\n");
     minor = MINOR(f->f_inode->i_rdev);
     ret = copy_from_user(buff, p, length); 
-  
+    
     if(ret){
         printk("copy from user failed \n");
         return -EFAULT;
@@ -290,10 +287,12 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
             }
         }
         for(j = 0; j < 576; j++ ){
-                samples2[0][0][j] = bram_b[j];
+                samples2[0][0][j] = 2;
+                //samples2[0][0][j] = bram_b[j];
         }
         for(j = 576; j < 1152; j++ ){
-                samples2[0][1][j] = bram_b[j];
+                samples2[0][1][j] = 2;
+                //samples2[0][1][j] = bram_b[j];
         }
         printk("MINOR 1 write\n");
         return length;
@@ -413,7 +412,7 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
             //s = samples2[gr][ch][1];
             //printk(KERN_WARNING"s: %d\n",s);
 
-            for( sample = 0; sample < 576 ;sample *= 18){
+            for( sample = 0; sample < 576 ;sample += 18){
                 for ( block = 0; block < 32; block++) {
                     for ( win = 0; win < win_count; win++) {    
                         getIMDCT();
