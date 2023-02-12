@@ -453,13 +453,15 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
                 printk(KERN_ALERT"ISPIS");
                 for(i = 0; i < 576; i++){
                     bram_a[i] = samples2[0][0][i];
-                    printk(KERN_WARNING"bram_a[%d]: %d\n",i, bram_a[i]); 
+                    //printk(KERN_WARNING"bram_a[%d]: %d\n",i, bram_a[i]); 
                     bram_b[i] = samples2[1][0][i];
+                    printk(KERN_WARNING"bram_b[%d]: %d\n",i, bram_b[i]); 
                 }   
                 for(i = 576; i < 1152; i++){
                     bram_a[i] = samples2[0][1][i]; 
-                    printk(KERN_WARNING"bram_a[%d]: %d\n",i, bram_a[i]); 
+                    //printk(KERN_WARNING"bram_a[%d]: %d\n",i, bram_a[i]); 
                     bram_b[i] = samples2[1][1][i];
+                    printk(KERN_WARNING"bram_b[%d]: %d\n",i, bram_b[i]); 
                 }
 
             
