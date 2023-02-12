@@ -45,7 +45,29 @@ struct file_operations my_fops =
 };
 
 int endRead = 0;
+int endIMDCT = 0;
 int q =0;
+int sample = 0;
+int block = 0;
+int win = 0;
+int brojac_xi = 0;
+int zavrsio_overlap = 0;
+
+// promenljive za IMDCT funkciju
+int sine_block[4][36];
+int sample_block[36];
+int temp_block[36];
+int block_type[2][2];
+int prev_samples[2][32][18];
+int x=0;
+int n = 0;
+int half_n = 0;
+int win_count = 0;
+int k = 0;
+int xi = 0;
+int xi_1 = 0;
+int s = 0;
+int cos_counter = 0;
 
 int bram_a[BRAM_SIZE];
 int bram_b[BRAM_SIZE];
@@ -77,6 +99,38 @@ static int IMDCT_close(struct inode *i, struct file *f)
   return 0;
 }
 
+void getIMDCT(void){
+
+    for ( i = 0; i < n; i++) {
+        xi = 0;
+        for ( k = 0; k < half_n; k++) {
+            
+            s = samples2[gr][ch][18 * block + half_n * win + k];
+            //printk(KERN_WARNING"s: %d\n", s);
+            if( half_n == 18 ){
+                xi_1 = s * cos_rom[k + ( i * 6 )];
+                xi = xi + xi_1;
+                brojac_xi ++;
+                //printk(KERN_WARNING"counter: %d\n", brojac_xi);
+                // printk(KERN_WARNING"xi: %d\n", xi);
+
+            }else if(half_n == 6){
+                //printk(KERN_ALERT"half_n 6");
+                xi_1 = s * cos_rom[k + ( i * 6 )];
+                xi = xi + xi_1;
+            }else{
+                //printk(KERN_ALERT"GRESKA: half_n nije ni 6 ni 18");
+            }
+            
+        }
+
+        // Windowing samples 
+        sample_block[win * n + i] = xi * sine_block[block_type[gr][ch]][i];
+
+    }
+
+}
+
 ssize_t IMDCT_read(struct file *f, char __user *buffer, size_t length, loff_t *offset) 
 {
     char buff[BRAM_SIZE]; 
@@ -98,7 +152,7 @@ ssize_t IMDCT_read(struct file *f, char __user *buffer, size_t length, loff_t *o
     if(minor == 0){ // citamo iz bram_a
         
         value = bram_a[q];
-        len = scnprintf(buff,50, "%d,", value);
+        len = scnprintf(buff,BRAM_SIZE, "%d,", value);
         *offset += len;
         printk(KERN_NOTICE"buff = %s",buff);
         ret = copy_to_user(buffer, buff, len);
@@ -107,7 +161,7 @@ ssize_t IMDCT_read(struct file *f, char __user *buffer, size_t length, loff_t *o
 		}
         printk(KERN_NOTICE"q = %d",q);
         q++;
-        if( q > 10 ){
+        if( q > BRAM_SIZE ){
             endRead =1;
             q = 0;
         }
@@ -170,24 +224,7 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
     int len;
     int i = 0;
 
-    // promenljive za IMDCT funkciju
-	int sine_block[4][36];
-	int sample_block[36];
-    int temp_block[36];
-    int block_type[2][2];
-    int prev_samples[2][32][18];
-    int x=0;
-    int n = 0;
-    int half_n = 0;
-	int sample = 0;
-    int block = 0;
-    int win = 0;
-    int win_count = 0;
-    int k = 0;
-    int xi = 0;
-    int xi_1 = 0;
-    int s = 0;
-    int cos_counter = 0;
+
 
     printk("IMDCT write\n");
     minor = MINOR(f->f_inode->i_rdev);
@@ -201,6 +238,11 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
 
     printk(KERN_NOTICE"buff = %s",buff);
     printk(KERN_NOTICE"length = %zu",length);
+
+   // if( endIMDCT = 1){
+     //   endIMDCT = 0;
+      //  return 0;
+    //}
 
     if(minor == 0){ //ako upisujemo u bram_a
     
@@ -229,6 +271,7 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
         }
   
         printk("MINOR 0 write\n");
+        return length;
     }
 
     if(minor == 1){ //ako upisujemo u bram_b
@@ -255,6 +298,7 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
                 samples2[0][1][j] = bram_b[j];
         }
         printk("MINOR 1 write\n");
+        return length;
     }
     
     if(minor == 2){
@@ -371,39 +415,13 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
             //s = samples2[gr][ch][1];
             //printk(KERN_WARNING"s: %d\n",s);
 
-            
-            //for( sample = 0; sample < 576 ;sample += 18){
-                //for ( block = 0; block < 32; block++) {
-	    	        //for ( win = 0; win < win_count; win++) {
-	    	    	    for ( i = 0; i < n; i++) {
-	    	    		    xi = 0;
-	    	    		    for ( k = 0; k < half_n; k++) {
-                                
-                                s = samples2[gr][ch][18 * block + half_n * win + k];
-                                printk(KERN_WARNING"s: %d\n", s);
-                                if( half_n == 18 ){
-                                    //printk(KERN_ALERT"half_n 18");
-                                    //xi_1 =  s;
-                                    //printk(KERN_WARNING"n: %d\n",xi_1);
-                                    xi_1 = s * cos_rom[k + ( i * 6 )];
-                                    xi = xi + xi_1;
-                                    printk(KERN_WARNING"xi: %d\n", xi);
-                                }else if(half_n == 6){
-                                    printk(KERN_ALERT"half_n 6");
-                                    xi_1 = s * cos_rom[k + ( i * 6 )];
-                                    xi = xi + xi_1;
-                                }else{
-                                    printk(KERN_ALERT"GRESKA: half_n nije ni 6 ni 18");
-                                }
-                                
-                            }
-
-	    	    		    // Windowing samples 
-	    	    		    sample_block[win * n + i] = xi * sine_block[block_type[gr][ch]][i];
-                        }
-                        
-	    	    	//}
-	    	    //}
+            for( sample = 0; sample < 576 ;sample *= 18){
+                for ( block = 0; block < 32; block++) {
+                    for ( win = 0; win < win_count; win++) {    
+                        getIMDCT();
+                    }
+                } 
+                
 
                 printk(KERN_ALERT"IZASAO IZ FOROVA");
                 
@@ -431,27 +449,28 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
 	    	    	samples2[gr][ch][sample + i] = sample_block[i] + prev_samples[ch][block][i];
 	    	    	prev_samples[ch][block][i] = sample_block[18 + i];
 	    	    }
-            //} 
-                printk(KERN_ALERT"ODRADIO OVERLAP");
-            
-            
-            for(i = 0; i < 576; i++){
-                bram_a[i] = samples2[0][0][i]; 
-                bram_b[i] = samples2[1][0][i];
             }
-            for(i = 576; i < 1152; i++){
-                bram_a[i] = samples2[0][1][i]; 
-                bram_b[i] = samples2[1][1][i];
-            }  
+                printk(KERN_ALERT"ODRADIO Overlap");
             
-        } else {
+
+                printk(KERN_ALERT"ISPIS");
+                for(i = 0; i < 576; i++){
+                    bram_a[i] = samples2[0][0][i];
+                    printk(KERN_WARNING"bram_a[%d]: %d\n",i, bram_a[i]); 
+                    bram_b[i] = samples2[1][0][i];
+                }   
+                for(i = 576; i < 1152; i++){
+                    bram_a[i] = samples2[0][1][i]; 
+                    printk(KERN_WARNING"bram_a[%d]: %d\n",i, bram_a[i]); 
+                    bram_b[i] = samples2[1][1][i];
+                }
+
+            
+                
+        }else{
             ready = 0;
         }
-
     }
-
-
-    return length;
 }
 
 static int __init IMDCT_init(void)
