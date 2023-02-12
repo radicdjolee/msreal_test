@@ -287,11 +287,11 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
             }
         }
         for(j = 0; j < 576; j++ ){
-                samples2[0][0][j] = 2;
+                samples2[1][0][j] = 2;
                 //samples2[0][0][j] = bram_b[j];
         }
         for(j = 576; j < 1152; j++ ){
-                samples2[0][1][j] = 2;
+                samples2[1][1][j] = 2;
                 //samples2[0][1][j] = bram_b[j];
         }
         printk("MINOR 1 write\n");
@@ -454,7 +454,7 @@ ssize_t IMDCT_write(struct file *f, const char __user *buffer, size_t length, lo
                 for(i = 0; i < 576; i++){
                     bram_a[i] = samples2[0][0][i];
                     //printk(KERN_WARNING"bram_a[%d]: %d\n",i, bram_a[i]); 
-                    bram_b[i] = samples2[1][0][i];
+                    bram_b[i] = samples2[1][][i];
                     printk(KERN_WARNING"bram_b[%d]: %d\n",i, bram_b[i]); 
                 }   
                 for(i = 576; i < 1152; i++){
